@@ -22,12 +22,15 @@ jobs:
       id-token: write
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload frontend
         uses: actions/upload-pages-artifact@v3
-       with:
-        enablement: true
+        with:
           path: frontend
       - name: Deploy to GitHub Pages
         id: deployment
