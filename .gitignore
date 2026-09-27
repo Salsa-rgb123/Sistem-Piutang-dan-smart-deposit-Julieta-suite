@@ -1,0 +1,4 @@
+backend/varapay.db
+__pycache__/
+*.pyc
+.vscode/
