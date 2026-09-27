@@ -1,58 +1,35 @@
 # Julieta Suite
 
-Sistem Informasi Akuntansi Piutang, Penagihan Otomatis, dan Smart Deposit untuk **Julieta Event & Décor**.
+Sistem piutang, penagihan, dan smart deposit untuk **Julieta Event & Décor**. Penyimpanan cloud dan fungsi transaksi menggunakan Supabase; aplikasi tidak memerlukan server Python.
 
-## Jalankan tanpa instalasi aplikasi tambahan
+## Menyiapkan Supabase
 
-Cara paling cepat: buka `frontend/index.html` langsung di browser. Julieta Suite otomatis memakai penyimpanan lokal browser, sehingga pendataan tetap tersimpan di komputer yang digunakan.
+1. Buat project di Supabase.
+2. Buka **SQL Editor**, tempel isi `backend/schema.sql`, lalu jalankan query. Ini membuat tabel, kebijakan akses, katalog jasa, dan fungsi transaksi.
+3. Di **Authentication > Users**, buat akun untuk admin dan dosen. Jangan aktifkan pendaftaran publik untuk aplikasi ini.
+4. Buka **Project Settings > API Keys**. Salin Project URL dan `anon`/publishable key ke `frontend/supabase-config.js`, menggantikan nilai contoh.
+5. Jangan pernah menaruh `service_role` key atau secret key di frontend. Akses tabel dibatasi ke pengguna yang sudah login.
 
-## Mode database SQLite
+## Menjalankan aplikasi
 
-Jika Python 3.8+ tersedia, gunakan mode backend berikut. Tidak membutuhkan framework, npm, atau database server terpisah.
+Repository ini memakai GitHub Actions untuk menerbitkan folder `frontend/` ke GitHub Pages. Di GitHub, buka **Settings > Pages**, pilih **GitHub Actions** sebagai Build and deployment source, lalu jalankan workflow `Deploy Julieta Suite to GitHub Pages` dari tab **Actions** atau unggah commit baru ke branch `main`.
 
-```powershell
-cd "d:\SEMESTER 5\Pengkodean dan Pemrograman\TUGASUJIANTENGAHSEMESTER\VaraPay"
-python backend\server.py
-```
+Setelah workflow berhasil, buka URL Pages yang ditampilkan di **Settings > Pages**. Tambahkan URL tersebut ke **Authentication > URL Configuration** di Supabase, baik sebagai Site URL maupun URL redirect yang diizinkan. Masuk menggunakan akun Supabase yang sudah dibuat; data transaksi akan tersimpan di project Supabase.
 
-Buka `http://127.0.0.1:8000` di browser.
-
-Database otomatis dibuat di `backend/varapay.db` menggunakan SQLite. Data contoh hanya dibuat pada pertama kali database dibuat. Mode ini disarankan untuk penggunaan bersama dan backup terpusat.
+Untuk pratinjau lokal tanpa mengisi konfigurasi Supabase, buka `frontend/index.html`. Mode ini memakai `localStorage` pada browser tersebut; datanya tidak dibagikan ke Supabase atau komputer lain.
 
 ## Struktur
 
-- `frontend/` - halaman dashboard, styling, dan interaksi browser.
-- `backend/` - API Python standard library dan database SQLite.
-- `backend/varapay.db` - file database SQLite yang dibuat otomatis saat mode backend aktif.
+- `frontend/` - aplikasi web dan adapter Supabase.
+- `backend/schema.sql` - tabel, Row Level Security, katalog, dan fungsi transaksi database Supabase.
 
 ## Fitur
 
-- Dashboard ringkasan piutang, deposit, pelanggan, dan tagihan jatuh tempo.
-- Pencatatan pelanggan, piutang, pembayaran, dan smart deposit.
-- Profil admin aktif dan audit nama admin pada setiap transaksi keuangan.
-- Kontak WhatsApp wajib, tombol pengingat berisi draf pesan personal, dan edit data pelanggan.
-- Nama bank serta nomor rekening pelanggan untuk referensi pengembalian deposit.
-- Tanggal pencatatan dapat dipilih pada form pelanggan baru, invoice, deposit, pembayaran, kerusakan, dan pengembalian; tanggal tercatat pada riwayat.
-- Status tagihan otomatis: Menunggu, Sebagian, atau Lunas.
-- Pencatatan barang rusak/hilang dengan kalkulasi potongan deposit dan rincian transparan.
-- Proses pengembalian deposit yang dibatasi saldo bersih setelah kerusakan.
-- Pengingat penagihan berdasarkan tanggal jatuh tempo.
-- Master delapan jenis jasa dengan kisaran harga resmi, termasuk EO, dekorasi, MUA, wardrobe, catering, photobooth, MC, dan sanggar.
-- Pilihan jasa berupa kartu multi-pilih; tiap kartu memakai harga standar rekomendasi di titik tengah kisaran resmi: EO Rp20.000.000, Decoration Rp45.000.000, MUA Rp7.000.000, Wardrobe Rp12.750.000, Catering Rp67.500.000, Photobooth Rp5.500.000, MC Rp5.500.000, dan Sanggar Rp6.750.000.
-- Fee wilayah otomatis: Zona 1 Rp0, Zona 2 Rp2.500.000, Zona 3 Rp7.500.000, dan Zona 4 ASEAN/Internasional Rp25.000.000.
-- Total kontrak dihitung dari jumlah harga standar semua kartu terpilih + fee zona; backend menyimpan daftar layanan per kontrak dan menghitung ulang total.
+- Dashboard piutang, deposit, pelanggan, dan tagihan jatuh tempo.
+- Pencatatan pelanggan, invoice, pembayaran, deposit, kerusakan, serta pengembalian.
+- Katalog delapan jenis jasa dan fee wilayah yang tersimpan di Supabase.
+- Audit transaksi serta pencatatan admin.
+- Data hanya dapat dibaca dan diubah setelah login.
 
-## Integrasi GitHub
-
-Buat repository kosong di GitHub, lalu jalankan:
-
-```powershell
-git init
-git add .
-git commit -m "Initial VaraPay application"
-git branch -M main
-git remote add origin https://github.com/USERNAME/varapay.git
-git push -u origin main
-```
 
 Jangan mengunggah `backend/varapay.db` jika database berisi data pelanggan nyata.
