@@ -1,0 +1,58 @@
+# Julieta Suite
+
+Sistem Informasi Akuntansi Piutang, Penagihan Otomatis, dan Smart Deposit untuk **Julieta Event & Décor**.
+
+## Jalankan tanpa instalasi aplikasi tambahan
+
+Cara paling cepat: buka `frontend/index.html` langsung di browser. Julieta Suite otomatis memakai penyimpanan lokal browser, sehingga pendataan tetap tersimpan di komputer yang digunakan.
+
+## Mode database SQLite
+
+Jika Python 3.8+ tersedia, gunakan mode backend berikut. Tidak membutuhkan framework, npm, atau database server terpisah.
+
+```powershell
+cd "d:\SEMESTER 5\Pengkodean dan Pemrograman\TUGASUJIANTENGAHSEMESTER\VaraPay"
+python backend\server.py
+```
+
+Buka `http://127.0.0.1:8000` di browser.
+
+Database otomatis dibuat di `backend/varapay.db` menggunakan SQLite. Data contoh hanya dibuat pada pertama kali database dibuat. Mode ini disarankan untuk penggunaan bersama dan backup terpusat.
+
+## Struktur
+
+- `frontend/` - halaman dashboard, styling, dan interaksi browser.
+- `backend/` - API Python standard library dan database SQLite.
+- `backend/varapay.db` - file database SQLite yang dibuat otomatis saat mode backend aktif.
+
+## Fitur
+
+- Dashboard ringkasan piutang, deposit, pelanggan, dan tagihan jatuh tempo.
+- Pencatatan pelanggan, piutang, pembayaran, dan smart deposit.
+- Profil admin aktif dan audit nama admin pada setiap transaksi keuangan.
+- Kontak WhatsApp wajib, tombol pengingat berisi draf pesan personal, dan edit data pelanggan.
+- Nama bank serta nomor rekening pelanggan untuk referensi pengembalian deposit.
+- Tanggal pencatatan dapat dipilih pada form pelanggan baru, invoice, deposit, pembayaran, kerusakan, dan pengembalian; tanggal tercatat pada riwayat.
+- Status tagihan otomatis: Menunggu, Sebagian, atau Lunas.
+- Pencatatan barang rusak/hilang dengan kalkulasi potongan deposit dan rincian transparan.
+- Proses pengembalian deposit yang dibatasi saldo bersih setelah kerusakan.
+- Pengingat penagihan berdasarkan tanggal jatuh tempo.
+- Master delapan jenis jasa dengan kisaran harga resmi, termasuk EO, dekorasi, MUA, wardrobe, catering, photobooth, MC, dan sanggar.
+- Pilihan jasa berupa kartu multi-pilih; tiap kartu memakai harga standar rekomendasi di titik tengah kisaran resmi: EO Rp20.000.000, Decoration Rp45.000.000, MUA Rp7.000.000, Wardrobe Rp12.750.000, Catering Rp67.500.000, Photobooth Rp5.500.000, MC Rp5.500.000, dan Sanggar Rp6.750.000.
+- Fee wilayah otomatis: Zona 1 Rp0, Zona 2 Rp2.500.000, Zona 3 Rp7.500.000, dan Zona 4 ASEAN/Internasional Rp25.000.000.
+- Total kontrak dihitung dari jumlah harga standar semua kartu terpilih + fee zona; backend menyimpan daftar layanan per kontrak dan menghitung ulang total.
+
+## Integrasi GitHub
+
+Buat repository kosong di GitHub, lalu jalankan:
+
+```powershell
+git init
+git add .
+git commit -m "Initial VaraPay application"
+git branch -M main
+git remote add origin https://github.com/USERNAME/varapay.git
+git push -u origin main
+```
+
+Jangan mengunggah `backend/varapay.db` jika database berisi data pelanggan nyata.
