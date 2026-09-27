@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="wing" x1="19" y1="25" x2="109" y2="104" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BCA8D8"/>
+      <stop offset="1" stop-color="#806BA7"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="31" y1="35" x2="96" y2="95" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A9B9A8"/>
+      <stop offset="1" stop-color="#82769A"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#wing)" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="3.2" d="M63.5 62C51 43 28 27 17 37 4 49 20 69 55 69M64.5 62C77 43 100 27 111 37c13 12-3 32-38 32M62 67C45 61 25 65 22 79c-3 15 18 20 40-7M66 67c17-6 37-2 40 12 3 15-18 20-40-7"/>
+    <path stroke-width="2.1" d="M63 63C54 46 39 38 25 39c3 13 14 23 31 28M65 63c9-17 24-25 38-24-3 13-14 23-31 28M61 68C47 65 34 70 29 80c10 5 21 3 32-10M67 68c14-3 27 2 32 12-10 5-21 3-32-10"/>
+    <path stroke="url(#leaf)" stroke-width="2.1" d="M64 66c-1 16 2 28 8 39 4 7 3 12-2 16M64 70c-6 12-14 19-23 25M68 76c8 5 14 11 18 19M62 84c-8 1-14 5-19 11M71 87c7 1 12 5 15 10M62 59c-3-9-8-15-15-19M66 59c3-9 8-15 15-19M63 61c-6-12-8-23-6-33M65 61c6-12 8-23 6-33"/>
+    <path stroke="url(#leaf)" stroke-width="1.7" d="M47 95c-1-7-6-10-12-10 1 7 5 10 12 10ZM84 95c1-7 6-10 12-10-1 7-5 10-12 10ZM43 101c-5-4-10-4-15-1 4 5 9 6 15 1ZM85 101c5-4 10-4 15-1-4 5-9 6-15 1ZM49 44c-1-6-5-9-10-10 1 6 4 9 10 10ZM79 44c1-6 5-9 10-10-1 6-4 9-10 10Z"/>
+    <path stroke-width="2" d="M62 61c-8-9-11-18-8-27M66 61c8-9 11-18 8-27"/>
+    <circle cx="64" cy="65" r="3.2" fill="#806BA7" stroke="none"/>
+  </g>
+</svg>
