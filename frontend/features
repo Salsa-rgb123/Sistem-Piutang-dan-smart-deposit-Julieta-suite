@@ -1,4 +1,7 @@
 (() => {
+  const state = { view: 'overview', dashboard: null, customers: [] };
+  const appView = document.getElementById('app-view');
+  const pageTitle = document.getElementById('page-title');
   const storeKey = 'varapay-offline-data';
   const defaultAdmin = 'Admin Julieta';
   let activeAdmin = localStorage.getItem('varapay-admin-name') || defaultAdmin;
@@ -140,16 +143,8 @@
   }
 
   window.api = async (path, options = {}) => {
-    if (location.protocol === 'file:') return offlineApi(path, options);
-    try {
-      const response = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...options });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Permintaan tidak berhasil.');
-      return result;
-    } catch (error) {
-      if (error instanceof TypeError) return offlineApi(path, options);
-      throw error;
-    }
+    if (location.protocol === 'file:' || !window.julietaSupabase?.configured) return offlineApi(path, options);
+    return window.julietaSupabase.api(path, options);
   };
 
   function updateAdminDisplay() {
@@ -160,8 +155,59 @@
     if (avatar) avatar.textContent = initials(name);
   }
 
+  function setDatabaseStatus(connected) {
+    const label = document.querySelector('.sidebar-foot span:not(.status-dot)');
+    const detail = document.querySelector('.sidebar-foot small');
+    let signout = document.getElementById('signout-btn');
+    if (!signout) {
+      signout = document.createElement('button');
+      signout.id = 'signout-btn';
+      signout.type = 'button';
+      signout.className = 'signout-button';
+      signout.textContent = 'Keluar';
+      document.querySelector('.top-actions').insertBefore(signout, document.getElementById('refresh-btn'));
+    }
+    const cloud = Boolean(window.julietaSupabase?.configured && location.protocol !== 'file:');
+    if (label) label.textContent = cloud ? connected ? 'Supabase terhubung' : 'Supabase' : 'Mode lokal';
+    if (detail) detail.textContent = cloud ? connected ? 'Data tersimpan di cloud' : 'Login untuk akses cloud' : 'Data tersimpan di browser ini';
+    signout.hidden = !connected || !cloud;
+  }
+
+  function renderLogin() {
+    setDatabaseStatus(false);
+    appView.innerHTML = `<section class="auth-gate"><div class="auth-mark">JS</div><p class="eyebrow">Julieta Suite</p><h2>Masuk ke sistem</h2><p class="auth-copy">Gunakan akun yang dibuat di Supabase untuk mengakses data.</p><form id="supabase-login" class="auth-form"><label for="supabase-email">Email</label><input id="supabase-email" name="email" type="email" autocomplete="username" required><label for="supabase-password">Kata sandi</label><input id="supabase-password" name="password" type="password" autocomplete="current-password" required><p id="auth-error" class="auth-error" role="alert"></p><button class="primary-btn" type="submit">Masuk</button></form></section>`;
+    document.getElementById('supabase-login').onsubmit = async event => {
+      event.preventDefault();
+      const form = new FormData(event.currentTarget);
+      const button = event.currentTarget.querySelector('button[type="submit"]');
+      const errorText = document.getElementById('auth-error');
+      button.disabled = true;
+      button.textContent = 'Memeriksa...';
+      const { error } = await window.julietaSupabaseClient.auth.signInWithPassword({
+        email: form.get('email'),
+        password: form.get('password')
+      });
+      if (error) {
+        errorText.textContent = error.message;
+        button.disabled = false;
+        button.textContent = 'Masuk';
+        return;
+      }
+      await refreshData();
+    };
+  }
+
   async function refreshData() {
+    if (window.julietaSupabase?.configured && location.protocol !== 'file:') {
+      const { data, error } = await window.julietaSupabaseClient.auth.getSession();
+      if (error) throw error;
+      if (!data.session) {
+        renderLogin();
+        return;
+      }
+    }
     const [dashboard, customers, settings, catalog] = await Promise.all([window.api('/api/dashboard'), window.api('/api/customers'), window.api('/api/settings'), window.api('/api/catalog')]);
+    setDatabaseStatus(Boolean(window.julietaSupabase?.configured && location.protocol !== 'file:'));
     services.splice(0, services.length, ...catalog.services.map(service => ({ name: service.name, min: service.min_price, max: service.max_price, standard: service.standard_price })));
     zones.splice(0, zones.length, ...catalog.zones.map(zone => ({ name: zone.name, fee: zone.fee })));
     state.dashboard = dashboard;
@@ -378,6 +424,17 @@
   window.loadData = refreshData;
 
   document.addEventListener('click', event => {
+    const nav = event.target.closest('.nav-item');
+    if (nav) { event.preventDefault(); event.stopImmediatePropagation(); state.view = nav.dataset.view; window.render(); return; }
+    const action = event.target.closest('[data-action]');
+    if (action) { event.preventDefault(); event.stopImmediatePropagation(); window.modal(action.dataset.action); return; }
+    const signout = event.target.closest('#signout-btn');
+    if (signout && window.julietaSupabase?.configured) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.julietaSupabaseClient.auth.signOut().then(renderLogin);
+      return;
+    }
     const admin = event.target.closest('#admin-settings');
     if (admin) { event.preventDefault(); event.stopImmediatePropagation(); modal('admin'); return; }
     const edit = event.target.closest('[data-edit-customer]');
@@ -391,6 +448,7 @@
   }, true);
 
   document.getElementById('refresh-btn').onclick = refreshData;
+  document.getElementById('today').textContent = new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
   updateAdminDisplay();
   refreshData().catch(error => {
     document.getElementById('app-view').innerHTML = `<div class="empty">Data belum bisa dimuat: ${error.message}</div>`;
