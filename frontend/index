@@ -17,7 +17,7 @@
         <button class="nav-item" data-view="receivables"><span>◫</span> Piutang & Tagihan</button>
         <button class="nav-item" data-view="deposits"><span>◇</span> Smart Deposit</button>
       </nav>
-      <div class="sidebar-foot"><span class="status-dot"></span><span>Database terhubung</span><small>SQLite lokal • Aman tersimpan</small></div>
+      <div class="sidebar-foot"><span class="status-dot"></span><span>Mode lokal</span><small>Data tersimpan di browser ini</small></div>
     </aside>
     <main class="main-content">
       <header class="topbar"><div><p class="eyebrow">Julieta Suite <span>· by Julieta Event &amp; Décor</span></p><h1 id="page-title">Ringkasan bisnis</h1></div><div class="top-actions"><div class="header-wordmark"><img class="header-butterfly" src="botanical-butterfly.svg" alt=""><span><strong>Julieta Suite</strong><small>Julieta Event &amp; Décor</small></span></div><span class="today" id="today"></span><button class="icon-button" title="Segarkan data" id="refresh-btn">↻</button><button class="admin-chip" id="admin-settings" title="Ubah nama admin"><span class="avatar" id="admin-avatar">AJ</span><span><strong id="admin-display">Admin Julieta</strong><small>Admin bertugas</small></span><span class="admin-chevron">⌄</span></button></div></header>
@@ -25,7 +25,9 @@
     </main>
   </div>
   <div class="toast" id="toast"></div>
-  <script src="app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+  <script src="supabase-api.js"></script>
   <script src="features.js"></script>
 </body>
 </html>
