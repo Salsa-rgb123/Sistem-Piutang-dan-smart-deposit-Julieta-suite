@@ -94,6 +94,13 @@
     if (path === '/api/invoices' && method === 'POST') return rpc('create_invoice', { p_payload: payload });
     if (path === '/api/deposits' && method === 'POST') return rpc('create_deposit', { p_payload: payload });
 
+    const customerDeleteMatch = path.match(/^\/api\/customers\/(\d+)$/);
+    if (customerDeleteMatch && method === 'DELETE') return rpc('delete_customer', { p_customer_id: Number(customerDeleteMatch[1]) });
+    const invoiceDeleteMatch = path.match(/^\/api\/invoices\/(\d+)$/);
+    if (invoiceDeleteMatch && method === 'DELETE') return rpc('delete_invoice', { p_invoice_id: Number(invoiceDeleteMatch[1]) });
+    const depositDeleteMatch = path.match(/^\/api\/deposits\/(\d+)$/);
+    if (depositDeleteMatch && method === 'DELETE') return rpc('delete_deposit', { p_deposit_id: Number(depositDeleteMatch[1]) });
+
     const customerMatch = path.match(/^\/api\/customers\/(\d+)$/);
     if (customerMatch && method === 'PUT') {
       return rpc('update_customer', { p_customer_id: Number(customerMatch[1]), p_payload: payload });
