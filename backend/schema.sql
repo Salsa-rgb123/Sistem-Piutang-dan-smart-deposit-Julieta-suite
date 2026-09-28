@@ -366,6 +366,61 @@ begin
 end;
 $$;
 
+create or replace function public.delete_invoice(p_invoice_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.invoices where id = p_invoice_id) then
+    raise exception 'Piutang tidak ditemukan';
+  end if;
+  delete from public.transaction_logs
+  where reference_id = p_invoice_id and transaction_type in ('Piutang', 'Penagihan');
+  delete from public.invoices where id = p_invoice_id;
+  return jsonb_build_object('id', p_invoice_id);
+end;
+$$;
+
+create or replace function public.delete_deposit(p_deposit_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.deposits where id = p_deposit_id) then
+    raise exception 'Deposit tidak ditemukan';
+  end if;
+  delete from public.transaction_logs
+  where reference_id = p_deposit_id and transaction_type in ('Deposit', 'Potongan kerusakan', 'Pengembalian deposit');
+  delete from public.deposits where id = p_deposit_id;
+  return jsonb_build_object('id', p_deposit_id);
+end;
+$$;
+
+create or replace function public.delete_customer(p_customer_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (select 1 from public.customers where id = p_customer_id) then
+    raise exception 'Pelanggan tidak ditemukan';
+  end if;
+  delete from public.transaction_logs
+  where (transaction_type = 'Pelanggan' and reference_id = p_customer_id)
+     or (transaction_type in ('Piutang', 'Penagihan') and reference_id in (select id from public.invoices where customer_id = p_customer_id))
+     or (transaction_type in ('Deposit', 'Potongan kerusakan', 'Pengembalian deposit') and reference_id in (select id from public.deposits where customer_id = p_customer_id));
+  delete from public.deposits where customer_id = p_customer_id;
+  delete from public.invoices where customer_id = p_customer_id;
+  delete from public.customers where id = p_customer_id;
+  return jsonb_build_object('id', p_customer_id);
+end;
+$$;
+
 revoke all on function public.create_customer(jsonb) from public, anon;
 revoke all on function public.update_customer(bigint, jsonb) from public, anon;
 revoke all on function public.create_invoice(jsonb) from public, anon;
@@ -374,6 +429,9 @@ revoke all on function public.record_payment(bigint, jsonb) from public, anon;
 revoke all on function public.record_damage(bigint, jsonb) from public, anon;
 revoke all on function public.return_deposit(bigint, jsonb) from public, anon;
 revoke all on function public.set_admin_name(jsonb) from public, anon;
+revoke all on function public.delete_invoice(bigint) from public, anon;
+revoke all on function public.delete_deposit(bigint) from public, anon;
+revoke all on function public.delete_customer(bigint) from public, anon;
 grant execute on function public.create_customer(jsonb) to authenticated;
 grant execute on function public.update_customer(bigint, jsonb) to authenticated;
 grant execute on function public.create_invoice(jsonb) to authenticated;
@@ -382,3 +440,6 @@ grant execute on function public.record_payment(bigint, jsonb) to authenticated;
 grant execute on function public.record_damage(bigint, jsonb) to authenticated;
 grant execute on function public.return_deposit(bigint, jsonb) to authenticated;
 grant execute on function public.set_admin_name(jsonb) to authenticated;
+grant execute on function public.delete_invoice(bigint) to authenticated;
+grant execute on function public.delete_deposit(bigint) to authenticated;
+grant execute on function public.delete_customer(bigint) to authenticated;
