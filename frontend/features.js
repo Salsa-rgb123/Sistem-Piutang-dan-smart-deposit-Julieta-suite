@@ -3,7 +3,6 @@
   const appView = document.getElementById('app-view');
   const pageTitle = document.getElementById('page-title');
   const storeKey = 'varapay-offline-data';
-  const demoModeKey = 'julieta-demo-mode';
   const defaultAdmin = 'Admin Julieta';
   let activeAdmin = localStorage.getItem('varapay-admin-name') || defaultAdmin;
   if (activeAdmin === 'Admin VaraPay') activeAdmin = defaultAdmin;
@@ -177,8 +176,7 @@
   }
 
   window.api = async (path, options = {}) => {
-    if (location.protocol === 'file:' || !window.julietaSupabase?.configured || sessionStorage.getItem(demoModeKey) === 'true') return offlineApi(path, options);
-    return window.julietaSupabase.api(path, options);
+    return offlineApi(path, options);
   };
 
   function updateAdminDisplay() {
@@ -189,65 +187,16 @@
     if (avatar) avatar.textContent = initials(name);
   }
 
-  function setDatabaseStatus(connected) {
+  function setDatabaseStatus() {
     const label = document.querySelector('.sidebar-foot span:not(.status-dot)');
     const detail = document.querySelector('.sidebar-foot small');
-    let signout = document.getElementById('signout-btn');
-    if (!signout) {
-      signout = document.createElement('button');
-      signout.id = 'signout-btn';
-      signout.type = 'button';
-      signout.className = 'signout-button';
-      signout.textContent = 'Keluar';
-      document.querySelector('.top-actions').insertBefore(signout, document.getElementById('refresh-btn'));
-    }
-    const cloud = Boolean(window.julietaSupabase?.configured && location.protocol !== 'file:');
-    const demo = sessionStorage.getItem(demoModeKey) === 'true';
-    if (label) label.textContent = demo ? 'Mode demo' : cloud ? connected ? 'Supabase terhubung' : 'Supabase' : 'Mode lokal';
-    if (detail) detail.textContent = demo ? 'Data contoh hanya di browser ini' : cloud ? connected ? 'Data tersimpan di cloud' : 'Login untuk akses cloud' : 'Data tersimpan di browser ini';
-    signout.textContent = demo ? 'Keluar demo' : 'Keluar';
-    signout.hidden = !demo && (!connected || !cloud);
-  }
-
-  function renderLogin() {
-    setDatabaseStatus(false);
-    appView.innerHTML = `<section class="auth-gate"><div class="auth-mark">JS</div><p class="eyebrow">Julieta Suite</p><h2>Masuk ke sistem</h2><p class="auth-copy">Gunakan akun Supabase untuk membuka data cloud, atau masuk ke demo dengan data contoh.</p><form id="supabase-login" class="auth-form"><label for="supabase-email">Email</label><input id="supabase-email" name="email" type="email" autocomplete="username" required><label for="supabase-password">Kata sandi</label><input id="supabase-password" name="password" type="password" autocomplete="current-password" required><p id="auth-error" class="auth-error" role="alert"></p><button class="primary-btn" type="submit">Masuk</button><button class="secondary-btn" id="demo-mode-btn" type="button">Masuk mode demo</button><small class="auth-copy">Demo memakai data contoh yang hanya tersimpan di browser ini.</small></form></section>`;
-    document.getElementById('supabase-login').onsubmit = async event => {
-      event.preventDefault();
-      const form = new FormData(event.currentTarget);
-      const button = event.currentTarget.querySelector('button[type="submit"]');
-      const errorText = document.getElementById('auth-error');
-      button.disabled = true;
-      button.textContent = 'Memeriksa...';
-      const { error } = await window.julietaSupabaseClient.auth.signInWithPassword({
-        email: form.get('email'),
-        password: form.get('password')
-      });
-      if (error) {
-        errorText.textContent = error.message;
-        button.disabled = false;
-        button.textContent = 'Masuk';
-        return;
-      }
-      await refreshData();
-    };
-    document.getElementById('demo-mode-btn').onclick = async () => {
-      sessionStorage.setItem(demoModeKey, 'true');
-      await refreshData();
-    };
+    if (label) label.textContent = 'Mode lokal';
+    if (detail) detail.textContent = 'Data tersimpan di browser ini';
   }
 
   async function refreshData() {
-    if (window.julietaSupabase?.configured && location.protocol !== 'file:' && sessionStorage.getItem(demoModeKey) !== 'true') {
-      const { data, error } = await window.julietaSupabaseClient.auth.getSession();
-      if (error) throw error;
-      if (!data.session) {
-        renderLogin();
-        return;
-      }
-    }
     const [dashboard, customers, settings, catalog] = await Promise.all([window.api('/api/dashboard'), window.api('/api/customers'), window.api('/api/settings'), window.api('/api/catalog')]);
-    setDatabaseStatus(Boolean(window.julietaSupabase?.configured && location.protocol !== 'file:'));
+    setDatabaseStatus();
     services.splice(0, services.length, ...catalog.services.map(service => ({ name: service.name, min: service.min_price, max: service.max_price, standard: service.standard_price })));
     zones.splice(0, zones.length, ...catalog.zones.map(zone => ({ name: zone.name, fee: zone.fee })));
     state.dashboard = dashboard;
@@ -484,18 +433,6 @@
     if (nav) { event.preventDefault(); event.stopImmediatePropagation(); state.view = nav.dataset.view; window.render(); return; }
     const action = event.target.closest('[data-action]');
     if (action) { event.preventDefault(); event.stopImmediatePropagation(); window.modal(action.dataset.action); return; }
-    const signout = event.target.closest('#signout-btn');
-    if (signout) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      if (sessionStorage.getItem(demoModeKey) === 'true') {
-        sessionStorage.removeItem(demoModeKey);
-        renderLogin();
-      } else if (window.julietaSupabase?.configured) {
-        window.julietaSupabaseClient.auth.signOut().then(renderLogin);
-      }
-      return;
-    }
     const admin = event.target.closest('#admin-settings');
     if (admin) { event.preventDefault(); event.stopImmediatePropagation(); modal('admin'); return; }
     const deleteCustomer = event.target.closest('[data-delete-customer]');
