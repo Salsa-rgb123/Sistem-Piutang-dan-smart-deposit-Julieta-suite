@@ -91,6 +91,22 @@
       data.customers.push(item); recordLocal(data, 'Pelanggan', item.id, `Tambah pelanggan ${item.name}`, body.recorded_at); saveLocal(data); return item;
     }
     const customerMatch = path.match(/^\/api\/customers\/(\d+)$/);
+    if (customerMatch && method === 'DELETE') {
+      const customerId = Number(customerMatch[1]);
+      const invoiceIds = data.invoices.filter(invoice => Number(invoice.customer_id) === customerId).map(invoice => Number(invoice.id));
+      const depositIds = data.deposits.filter(deposit => Number(deposit.customer_id) === customerId).map(deposit => Number(deposit.id));
+      data.damages = data.damages.filter(damage => !depositIds.includes(Number(damage.deposit_id)));
+      data.invoices = data.invoices.filter(invoice => Number(invoice.customer_id) !== customerId);
+      data.deposits = data.deposits.filter(deposit => Number(deposit.customer_id) !== customerId);
+      data.customers = data.customers.filter(customer => Number(customer.id) !== customerId);
+      data.transactions = data.transactions.filter(transaction => !(
+        (transaction.transaction_type === 'Pelanggan' && Number(transaction.reference_id) === customerId) ||
+        (['Piutang', 'Penagihan'].includes(transaction.transaction_type) && invoiceIds.includes(Number(transaction.reference_id))) ||
+        (['Deposit', 'Potongan kerusakan', 'Pengembalian deposit'].includes(transaction.transaction_type) && depositIds.includes(Number(transaction.reference_id)))
+      ));
+      saveLocal(data);
+      return { id: customerId };
+    }
     if (customerMatch && method === 'PUT') {
       const item = data.customers.find(customer => Number(customer.id) === Number(customerMatch[1]));
       if (!body.bank_name?.trim() || !body.account_number?.trim()) throw new Error('Nama bank dan nomor rekening wajib diisi.');
@@ -108,9 +124,26 @@
       const item = { ...body, id: Date.now(), invoice_number: `INV-${Date.now().toString().slice(-8)}`, customer_name: data.customers.find(customer => Number(customer.id) === Number(body.customer_id))?.name || '-', services: serviceItems, service_type: selectedServices.map(service => service.name).join(', '), service_amount: serviceAmount, location_fee: zone.fee, total_amount: total, paid_amount: paid, status: paid >= total ? 'Lunas' : paid ? 'Sebagian' : 'Menunggu', created_at: localTimestamp(body.recorded_at) };
       data.invoices.push(item); recordLocal(data, 'Piutang', item.id, `Catat ${item.invoice_number}`, body.recorded_at); saveLocal(data); return item;
     }
+    const invoiceDeleteMatch = path.match(/^\/api\/invoices\/(\d+)$/);
+    if (invoiceDeleteMatch && method === 'DELETE') {
+      const invoiceId = Number(invoiceDeleteMatch[1]);
+      data.invoices = data.invoices.filter(invoice => Number(invoice.id) !== invoiceId);
+      data.transactions = data.transactions.filter(transaction => !(['Piutang', 'Penagihan'].includes(transaction.transaction_type) && Number(transaction.reference_id) === invoiceId));
+      saveLocal(data);
+      return { id: invoiceId };
+    }
     if (path === '/api/deposits' && method === 'POST') {
       const item = { ...body, id: Date.now(), customer_name: data.customers.find(customer => Number(customer.id) === Number(body.customer_id))?.name || '-', amount: Number(body.amount), returned_amount: 0, damaged_amount: 0, status: 'Tersimpan', deposited_at: localTimestamp(body.recorded_at) };
       data.deposits.push(item); recordLocal(data, 'Deposit', item.id, `Setor deposit ${money(item.amount)}`, body.recorded_at); saveLocal(data); return item;
+    }
+    const depositDeleteMatch = path.match(/^\/api\/deposits\/(\d+)$/);
+    if (depositDeleteMatch && method === 'DELETE') {
+      const depositId = Number(depositDeleteMatch[1]);
+      data.deposits = data.deposits.filter(deposit => Number(deposit.id) !== depositId);
+      data.damages = data.damages.filter(damage => Number(damage.deposit_id) !== depositId);
+      data.transactions = data.transactions.filter(transaction => !(['Deposit', 'Potongan kerusakan', 'Pengembalian deposit'].includes(transaction.transaction_type) && Number(transaction.reference_id) === depositId));
+      saveLocal(data);
+      return { id: depositId };
     }
     const paymentMatch = path.match(/^\/api\/invoices\/(\d+)\/pay$/);
     if (paymentMatch && method === 'POST') {
@@ -277,7 +310,7 @@
   }
 
   function renderReceivables() {
-    appView.innerHTML = `<div class="section-head"><div><h2>Daftar piutang</h2><p>Tagihan, kontak pelanggan, dan jejak admin pencatat.</p></div><button class="primary-btn" data-action="invoice">+ Catat piutang</button></div><div class="toolbar"><input class="search" id="invoice-search" placeholder="Cari pelanggan atau nomor invoice..."></div><div class="data-panel"><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Pelanggan</th><th>Kontak</th><th>Total</th><th>Terbayar</th><th>Jatuh tempo</th><th>Status</th><th>Admin terakhir</th><th>Aksi</th></tr></thead><tbody id="invoice-table">${state.dashboard.invoices.map(invoice => `<tr><td><strong>${invoice.invoice_number}</strong><br><small>${invoice.description}</small></td><td>${customerCell(invoice.customer_name)}</td><td>${invoice.customer_phone || '<span class="contact-missing">Belum ada nomor</span>'}</td><td>${money(invoice.total_amount)}</td><td>${money(invoice.paid_amount)}</td><td>${dateText(invoice.due_date)}</td><td>${invoiceStatus(invoice.status)}</td><td>${invoice.admin_name || defaultAdmin}</td><td class="row-actions">${invoice.status !== 'Lunas' ? `<button class="text-link" data-pay="${invoice.id}" data-balance="${invoice.total_amount - invoice.paid_amount}">Catat bayar</button>${whatsappButton(invoice, true)}` : '—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+    appView.innerHTML = `<div class="section-head"><div><h2>Daftar piutang</h2><p>Tagihan, kontak pelanggan, dan jejak admin pencatat.</p></div><button class="primary-btn" data-action="invoice">+ Catat piutang</button></div><div class="toolbar"><input class="search" id="invoice-search" placeholder="Cari pelanggan atau nomor invoice..."></div><div class="data-panel"><div class="table-wrap"><table><thead><tr><th>Invoice</th><th>Pelanggan</th><th>Kontak</th><th>Total</th><th>Terbayar</th><th>Jatuh tempo</th><th>Status</th><th>Admin terakhir</th><th>Aksi</th></tr></thead><tbody id="invoice-table">${state.dashboard.invoices.map(invoice => `<tr><td><strong>${invoice.invoice_number}</strong><br><small>${invoice.description}</small></td><td>${customerCell(invoice.customer_name)}</td><td>${invoice.customer_phone || '<span class="contact-missing">Belum ada nomor</span>'}</td><td>${money(invoice.total_amount)}</td><td>${money(invoice.paid_amount)}</td><td>${dateText(invoice.due_date)}</td><td>${invoiceStatus(invoice.status)}</td><td>${invoice.admin_name || defaultAdmin}</td><td class="row-actions">${invoice.status !== 'Lunas' ? `<button class="text-link" data-pay="${invoice.id}" data-balance="${invoice.total_amount - invoice.paid_amount}">Catat bayar</button>${whatsappButton(invoice, true)}` : ''}<button class="text-link danger-link" data-delete-invoice="${invoice.id}">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
     state.dashboard.invoices.forEach((invoice, index) => {
       const cell = document.querySelectorAll('#invoice-table tr')[index]?.cells[0];
       if (cell) {
@@ -306,11 +339,16 @@
       recorded.className = 'recorded-date';
       recorded.textContent = `Dicatat ${dateText(deposit.deposited_at)}`;
       row.cells[1].append(recorded);
+      const deleteButton = document.createElement('button');
+      deleteButton.className = 'text-link danger-link';
+      deleteButton.dataset.deleteDeposit = deposit.id;
+      deleteButton.textContent = 'Hapus';
+      row.lastElementChild.append(deleteButton);
     });
   }
 
   function renderCustomers() {
-    appView.innerHTML = `<div class="section-head"><div><h2>Data pelanggan</h2><p>Nomor WhatsApp wajib agar pengingat tagihan bisa dikirim.</p></div><button class="primary-btn" data-action="customer">+ Tambah pelanggan</button></div><div class="data-panel"><div class="table-wrap"><table><thead><tr><th>Nama pasangan</th><th>Nomor kontak / WhatsApp</th><th>Email</th><th>Tanggal acara</th><th>Venue</th><th>Admin input</th><th>Aksi</th></tr></thead><tbody>${state.customers.map(customer => `<tr><td>${customerCell(customer.name)}</td><td>${customer.phone ? `<a class="phone-link" href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '62')}" target="_blank" rel="noopener">${customer.phone}</a>` : '<span class="contact-missing">Nomor belum diisi</span>'}</td><td>${customer.email || '-'}</td><td>${dateText(customer.event_date)}</td><td>${customer.venue || '-'}</td><td>${customer.admin_name || defaultAdmin}</td><td><button class="text-link" data-edit-customer="${customer.id}">Edit</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    appView.innerHTML = `<div class="section-head"><div><h2>Data pelanggan</h2><p>Nomor WhatsApp wajib agar pengingat tagihan bisa dikirim.</p></div><button class="primary-btn" data-action="customer">+ Tambah pelanggan</button></div><div class="data-panel"><div class="table-wrap"><table><thead><tr><th>Nama pasangan</th><th>Nomor kontak / WhatsApp</th><th>Email</th><th>Tanggal acara</th><th>Venue</th><th>Admin input</th><th>Aksi</th></tr></thead><tbody>${state.customers.map(customer => `<tr><td>${customerCell(customer.name)}</td><td>${customer.phone ? `<a class="phone-link" href="https://wa.me/${customer.phone.replace(/\D/g, '').replace(/^0/, '62')}" target="_blank" rel="noopener">${customer.phone}</a>` : '<span class="contact-missing">Nomor belum diisi</span>'}</td><td>${customer.email || '-'}</td><td>${dateText(customer.event_date)}</td><td>${customer.venue || '-'}</td><td>${customer.admin_name || defaultAdmin}</td><td><button class="text-link" data-edit-customer="${customer.id}">Edit</button><button class="text-link danger-link" data-delete-customer="${customer.id}">Hapus</button></td></tr>`).join('')}</tbody></table></div></div>`;
     const header = appView.querySelector('thead tr');
     const actionHeader = header.lastElementChild;
     ['Tanggal pencatatan', 'Bank pengembalian deposit', 'Nomor rekening'].forEach(label => {
@@ -415,6 +453,17 @@
     setTimeout(() => toast.classList.remove('show'), 3000);
   }
 
+  async function deleteRecord(path, message) {
+    if (!window.confirm(message)) return;
+    try {
+      await window.api(path, { method: 'DELETE' });
+      showFeatureToast('Data berhasil dihapus.');
+      await refreshData();
+    } catch (error) {
+      showFeatureToast(error.message);
+    }
+  }
+
   window.renderOverview = renderOverview;
   window.renderReceivables = renderReceivables;
   window.renderDeposits = renderDeposits;
@@ -449,6 +498,12 @@
     }
     const admin = event.target.closest('#admin-settings');
     if (admin) { event.preventDefault(); event.stopImmediatePropagation(); modal('admin'); return; }
+    const deleteCustomer = event.target.closest('[data-delete-customer]');
+    if (deleteCustomer) { event.preventDefault(); event.stopImmediatePropagation(); deleteRecord(`/api/customers/${deleteCustomer.dataset.deleteCustomer}`, 'Hapus pelanggan ini beserta piutang, deposit, dan riwayat transaksinya?'); return; }
+    const deleteInvoice = event.target.closest('[data-delete-invoice]');
+    if (deleteInvoice) { event.preventDefault(); event.stopImmediatePropagation(); deleteRecord(`/api/invoices/${deleteInvoice.dataset.deleteInvoice}`, 'Hapus data piutang dan riwayat pembayarannya?'); return; }
+    const deleteDeposit = event.target.closest('[data-delete-deposit]');
+    if (deleteDeposit) { event.preventDefault(); event.stopImmediatePropagation(); deleteRecord(`/api/deposits/${deleteDeposit.dataset.deleteDeposit}`, 'Hapus deposit, rincian kerusakan, dan riwayat pengembaliannya?'); return; }
     const edit = event.target.closest('[data-edit-customer]');
     if (edit) { event.preventDefault(); event.stopImmediatePropagation(); modal('customer', state.customers.find(item => Number(item.id) === Number(edit.dataset.editCustomer))); return; }
     const damage = event.target.closest('[data-damage]');
